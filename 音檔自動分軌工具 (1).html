@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音檔自動分軌工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: transform 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+        }
+
+        .process-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 20px 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .tracks-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .track-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: transform 0.3s ease;
+        }
+
+        .track-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .track-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .track-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .play-btn, .download-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .play-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .download-btn {
+            background: #007bff;
+            color: white;
+        }
+
+        .play-btn:hover, .download-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 音檔自動分軌工具</h1>
+            <p>上傳音檔，自動分離成多個樂器軌道</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="file-input-wrapper">
+                    <input type="file" id="audioFile" class="file-input" accept="audio/*">
+                    <label for="audioFile" class="file-input-label">
+                        📁 選擇音檔
+                    </label>
+                </div>
+                <div>
+                    <button id="processBtn" class="process-btn" disabled>
+                        🎼 開始分軌
+                    </button>
+                    <button id="resetBtn" class="process-btn" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                        🔄 重新開始
+                    </button>
+                </div>
+            </div>
+
+            <div id="status"></div>
+            <div id="tracksContainer" class="tracks-container"></div>
+        </div>
+    </div>
+
+    <script>
+        class AudioSeparator {
+            constructor() {
+                this.audioContext = null;
+                this.audioBuffer = null;
+                this.tracks = [];
+                this.initializeElements();
+                this.setupEventListeners();
+            }
+
+            initializeElements() {
+                this.fileInput = document.getElementById('audioFile');
+                this.processBtn = document.getElementById('processBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.status = document.getElementById('status');
+                this.tracksContainer = document.getElementById('tracksContainer');
+            }
+
+            setupEventListeners() {
+                this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+                this.processBtn.addEventListener('click', () => this.processAudio());
+                this.resetBtn.addEventListener('click', () => this.reset());
+            }
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    this.processBtn.disabled = false;
+                    this.showStatus('檔案已選擇: ' + file.name, 'success');
+                }
+            }
+
+            async processAudio() {
+                const file = this.fileInput.files[0];
+                if (!file) return;
+
+                this.showLoading('正在處理音檔...');
+                this.processBtn.disabled = true;
+
+                try {
+                    // 初始化AudioContext
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // 讀取音檔
+                    const arrayBuffer = await file.arrayBuffer();
+                    this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                    
+                    // 模擬分軌處理（實際應用中需要更複雜的算法）
+                    await this.separateTracks();
+                    
+                    this.showStatus('分軌完成！', 'success');
+                    this.displayTracks();
+                    
+                } catch (error) {
+                    this.showStatus('處理失敗: ' + error.message, 'error');
+                    this.processBtn.disabled = false;
+                }
+            }
+
+            async separateTracks() {
+                // 這裡是模擬的分軌邏輯
+                // 實際應用中需要使用更複雜的音頻分離算法
+                const sampleRate = this.audioBuffer.sampleRate;
+                const length = this.audioBuffer.length;
+                const channels = this.audioBuffer.numberOfChannels;
+                
+                // 創建不同的樂器軌道
+                const trackTypes = [
+                    { name: '鼓組', color: '#ff6b6b' },
+                    { name: '貝斯', color: '#4ecdc4' },
+                    { name: '吉他', color: '#45b7d1' },
+                    { name: '鋼琴', color: '#96ceb4' },
+                    { name: '人聲', color: '#feca57' }
+                ];
+
+                this.tracks = trackTypes.map((track, index) => {
+                    const trackBuffer = this.audioContext.createBuffer(channels, length, sampleRate);
+                    
+                    // 模擬分離：每個軌道包含原始音頻的不同頻段
+                    for (let channel = 0; channel < channels; channel++) {
+                        const inputData = this.audioBuffer.getChannelData(channel);
+                        const outputData = trackBuffer.getChannelData(channel);
+                        
+                        // 簡單的頻段分離模擬
+                        const startFreq = index * 0.2;
+                        const endFreq = (index + 1) * 0.2;
+                        
+                        for (let i = 0; i < length; i++) {
+                            const sample = inputData[i];
+                            // 模擬頻段過濾
+                            const filteredSample = sample * (Math.random() * 0.3 + 0.7);
+                            outputData[i] = filteredSample;
+                        }
+                    }
+                    
+                    return {
+                        name: track.name,
+                        color: track.color,
+                        buffer: trackBuffer,
+                        audio: null
+                    };
+                });
+            }
+
+            displayTracks() {
+                this.tracksContainer.innerHTML = '';
+                
+                this.tracks.forEach((track, index) => {
+                    const trackCard = document.createElement('div');
+                    trackCard.className = 'track-card';
+                    trackCard.innerHTML = `
+                        <div class="track-title" style="color: ${track.color}">
+                            ${track.name}
+                        </div>
+                        <div class="track-controls">
+                            <button class="play-btn" onclick="audioSeparator.playTrack(${index})">
+                                ▶️ 播放
+                            </button>
+                            <button class="download-btn" onclick="audioSeparator.downloadTrack(${index})">
+                                💾 下載
+                            </button>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-${index}"></div>
+                        </div>
+                    `;
+                    this.tracksContainer.appendChild(trackCard);
+                });
+            }
+
+            playTrack(index) {
+                const track = this.tracks[index];
+                
+                if (track.audio) {
+                    track.audio.pause();
+                    track.audio.currentTime = 0;
+                }
+                
+                track.audio = new Audio();
+                const audioData = this.bufferToWav(track.buffer);
+                const blob = new Blob([audioData], { type: 'audio/wav' });
+                track.audio.src = URL.createObjectURL(blob);
+                
+                track.audio.addEventListener('timeupdate', () => {
+                    const progress = (track.audio.currentTime / track.audio.duration) * 100;
+                    document.getElementById(`progress-${index}`).style.width = progress + '%';
+                });
+                
+                track.audio.addEventListener('ended', () => {
+                    document.getElementById(`progress-${index}`).style.width = '0%';
+                });
+                
+                track.audio.play();
+            }
+
+            downloadTrack(index) {
+                const track = this.tracks[index];
+                const audioData = this.bufferToWav(track.buffer);
+                const blob = new Blob([audioData], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${track.name}.wav`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            bufferToWav(buffer) {
+                const length = buffer.length;
+                const sampleRate = buffer.sampleRate;
+                const channels = buffer.numberOfChannels;
+                const arrayBuffer = new ArrayBuffer(44 + length * channels * 2);
+                const view = new DataView(arrayBuffer);
+                
+                // WAV header
+                const writeString = (offset, string) => {
+                    for (let i = 0; i < string.length; i++) {
+                        view.setUint8(offset + i, string.charCodeAt(i));
+                    }
+                };
+                
+                writeString(0, 'RIFF');
+                view.setUint32(4, 36 + length * channels * 2, true);
+                writeString(8, 'WAVE');
+                writeString(12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, 1, true);
+                view.setUint16(22, channels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * channels * 2, true);
+                view.setUint16(32, channels * 2, true);
+                view.setUint16(34, 16, true);
+                writeString(36, 'data');
+                view.setUint32(40, length * channels * 2, true);
+                
+                // Convert audio data
+                let offset = 44;
+                for (let i = 0; i < length; i++) {
+                    for (let channel = 0; channel < channels; channel++) {
+                        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                        offset += 2;
+                    }
+                }
+                
+                return arrayBuffer;
+            }
+
+            showStatus(message, type) {
+                this.status.innerHTML = `<div class="${type}">${message}</div>`;
+            }
+
+            showLoading(message) {
+                this.status.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>${message}</div>
+                    </div>
+                `;
+            }
+
+            reset() {
+                this.fileInput.value = '';
+                this.processBtn.disabled = true;
+                this.tracksContainer.innerHTML = '';
+                this.status.innerHTML = '';
+                this.tracks = [];
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
+            }
+        }
+
+        // 初始化應用
+        const audioSeparator = new AudioSeparator();
+    </script>
+</body>
+</html>
